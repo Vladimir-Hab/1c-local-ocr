@@ -19,7 +19,7 @@
 
 ## 🎥 Демонстрация
 
-(https://rutube.ru/video/321446cb8e14618a603f7d8bef5437cd/)
+[🎥 Смотреть демонстрацию на RuTube](https://rutube.ru/video/321446cb8e14618a603f7d8bef5437cd/)
 
 ---
 
