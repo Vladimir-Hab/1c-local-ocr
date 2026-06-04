@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>НейроСкан 1С — Распознавание накладных за 30–60 секунд</title>
+<meta name="description" content="Расширение для 1С. Распознавание накладных УПД и ТОРГ-12 с фото. Автоматическое заполнение документов в 1С за 30–60 секунд. Всё локально, данные не уходят."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0d14;
+    --bg2: #0f1320;
+    --bg3: #141829;
+    --card: #161c2e;
+    --border: #1e2640;
+    --accent: #3b82f6;
+    --accent2: #60a5fa;
+    --accent-glow: rgba(59,130,246,0.15);
+    --green: #22c55e;
+    --red: #ef4444;
+    --text: #e8ecf4;
+    --text2: #8b9dc0;
+    --text3: #4a5578;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Golos Text', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ─── GRID BACKGROUND ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(10,13,20,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+
+  .nav-cta {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 9px 22px;
+    border-radius: 6px;
+    font-family: 'Golos Text', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .nav-cta:hover { background: var(--accent2); transform: translateY(-1px); }
+
+  /* ─── HERO ─── */
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: -200px; left: 50%;
+    transform: translateX(-50%);
+    width: 800px; height: 600px;
+    background: radial-gradient(ellipse, rgba(59,130,246,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.3);
+    color: var(--accent2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.6s ease both;
+  }
+  .badge::before { content: '●'; color: var(--green); font-size: 8px; animation: pulse 2s infinite; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(56px, 9vw, 120px);
+    line-height: 0.95;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  .hero-title .accent { color: var(--accent); }
+
+  .hero-sub {
+    font-size: clamp(16px, 2.5vw, 22px);
+    color: var(--text2);
+    max-width: 620px;
+    margin: 20px auto 40px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .hero-sub strong { color: var(--text); }
+
+  .hero-stats {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 48px;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  .stat {
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text2);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  .hero-divider {
+    width: 1px;
+    height: 48px;
+    background: var(--border);
+    align-self: center;
+  }
+
+  .hero-btns {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 8px;
+    font-family: 'Golos Text', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(59,130,246,0.35); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 14px 32px;
+    border-radius: 8px;
+    font-family: 'Golos Text', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent2); transform: translateY(-2px); }
+
+  /* ─── SECTION ─── */
+  section {
+    position: relative;
+    z-index: 1;
+    padding: 80px 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(36px, 5vw, 56px);
+    line-height: 1;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+
+  .section-sub {
+    color: var(--text2);
+    font-size: 17px;
+    max-width: 560px;
+    margin-bottom: 56px;
+  }
+
+  /* ─── VIDEO ─── */
+  .video-wrap {
+    position: relative;
+    z-index: 1;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    max-width: 860px;
+    margin: 0 auto 80px;
+    box-shadow: 0 0 60px rgba(59,130,246,0.1);
+  }
+  .video-wrap::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 17px;
+    background: linear-gradient(135deg, rgba(59,130,246,0.3), transparent 50%);
+    z-index: -1;
+  }
+  .video-top-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ef4444; }
+  .dot-y { background: #f59e0b; }
+  .dot-g { background: #22c55e; }
+  .video-url {
+    flex: 1;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+  }
+  .video-frame {
+    aspect-ratio: 16/9;
+    width: 100%;
+  }
+  .video-frame iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+
+  /* ─── HOW ─── */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .step-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    position: relative;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .step-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+
+  .step-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 64px;
+    color: var(--border);
+    line-height: 1;
+    margin-bottom: 12px;
+    transition: color 0.2s;
+  }
+  .step-card:hover .step-num { color: var(--accent-glow); }
+
+  .step-title {
+    font-weight: 700;
+    font-size: 17px;
+    margin-bottom: 8px;
+  }
+  .step-text { color: var(--text2); font-size: 14px; line-height: 1.6; }
+
+  /* ─── WHY ─── */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .compare-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+  .compare-card.good { border-color: rgba(34,197,94,0.3); }
+  .compare-card.bad { border-color: rgba(239,68,68,0.2); }
+
+  .compare-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 17px;
+    margin-bottom: 20px;
+  }
+  .tag-bad { background: rgba(239,68,68,0.15); color: #ef4444; padding: 3px 10px; border-radius: 4px; font-size: 12px; }
+  .tag-good { background: rgba(34,197,94,0.15); color: #22c55e; padding: 3px 10px; border-radius: 4px; font-size: 12px; }
+
+  .compare-list { list-style: none; }
+  .compare-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--text2);
+  }
+  .compare-list li:last-child { border-bottom: none; }
+  .compare-list li .icon { flex-shrink: 0; margin-top: 2px; font-size: 14px; }
+
+  /* ─── FEATURES ─── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .feat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 20px;
+    transition: border-color 0.2s;
+  }
+  .feat:hover { border-color: var(--accent); }
+  .feat-icon { font-size: 24px; margin-bottom: 12px; }
+  .feat-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+  .feat-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+
+  /* ─── SPECS ─── */
+  .specs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .specs-table th {
+    text-align: left;
+    padding: 12px 16px;
+    background: var(--bg3);
+    color: var(--text2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  .specs-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .specs-table td:first-child { color: var(--text); font-weight: 600; }
+  .specs-table tr:last-child td { border-bottom: none; }
+  .specs-table tr:hover td { background: var(--bg3); }
+
+  .specs-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .speed-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .speed-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+  }
+  .speed-icon { font-size: 28px; margin-bottom: 10px; }
+  .speed-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .speed-val { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--accent); }
+
+  /* ─── AUDIENCE ─── */
+  .audience-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .aud-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 36px 32px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .aud-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+
+  .aud-icon { font-size: 40px; margin-bottom: 16px; }
+  .aud-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 1px; margin-bottom: 8px; }
+  .aud-sub { font-size: 14px; color: var(--text2); margin-bottom: 20px; }
+
+  .aud-list { list-style: none; }
+  .aud-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 7px 0;
+    font-size: 14px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+  }
+  .aud-list li:last-child { border-bottom: none; }
+  .aud-list .chk { color: var(--green); flex-shrink: 0; }
+
+  /* ─── CTA ─── */
+  .cta-section {
+    position: relative;
+    z-index: 1;
+    padding: 80px 24px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 400px;
+    background: radial-gradient(ellipse, rgba(59,130,246,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cta-inner {
+    max-width: 700px;
+    margin: 0 auto;
+    background: var(--card);
+    border: 1px solid rgba(59,130,246,0.3);
+    border-radius: 20px;
+    padding: 56px 48px;
+    position: relative;
+  }
+
+  .cta-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(36px, 5vw, 52px);
+    line-height: 1;
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+  .cta-sub { color: var(--text2); font-size: 16px; margin-bottom: 36px; max-width: 480px; margin-left: auto; margin-right: auto; }
+
+  .cta-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
+
+  .cta-note {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 32px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: gap;
+  }
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--text2);
+  }
+  .footer-logo span { color: var(--accent); }
+  .footer-text { font-size: 12px; color: var(--text3); }
+
+  /* ─── DIVIDER ─── */
+  .full-divider {
+    position: relative;
+    z-index: 1;
+    height: 1px;
+    background: var(--border);
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ─── FAQ ─── */
+  .faq-list { display: flex; flex-direction: column; gap: 12px; }
+  .faq-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .faq-q {
+    padding: 18px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    transition: color 0.2s;
+  }
+  .faq-q:hover { color: var(--accent2); }
+  .faq-arrow { transition: transform 0.3s; color: var(--text3); }
+  .faq-item.open .faq-arrow { transform: rotate(180deg); }
+  .faq-a {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 20px;
+    color: var(--text2);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .faq-item.open .faq-a { max-height: 300px; padding: 0 20px 18px; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    nav { padding: 14px 20px; }
+    .steps { grid-template-columns: 1fr; }
+    .compare { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr 1fr; }
+    .speed-grid { grid-template-columns: 1fr; }
+    .audience-grid { grid-template-columns: 1fr; }
+    .hero-stats { gap: 24px; }
+    .hero-divider { display: none; }
+    .cta-inner { padding: 36px 24px; }
+    footer { flex-direction: column; gap: 12px; text-align: center; }
+  }
+
+  @media (max-width: 480px) {
+    .features-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Нейро<span>Скан</span> 1С</div>
+  <a href="https://t.me/vladimir_7575" class="nav-cta">Написать в Telegram</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">Расширение для 1С · Локальный ИИ · Без облака</div>
+  <h1 class="hero-title">Накладная в 1С<br/>за <span class="accent">30 секунд</span></h1>
+  <p class="hero-sub">
+    Сфотографировал УПД или ТОРГ-12 — <strong>нажал кнопку</strong> — документ заполнен.<br/>
+    Никакого ручного ввода. Никаких чужих серверов.
+  </p>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-num">30с</div>
+      <div class="stat-label">вместо 15 минут</div>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="stat">
+      <div class="stat-num">95%+</div>
+      <div class="stat-label">точность распознавания</div>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="stat">
+      <div class="stat-num">0</div>
+      <div class="stat-label">данных в интернет</div>
+    </div>
+  </div>
+  <div class="hero-btns">
+    <a href="https://t.me/" class="btn-primary">✉ Написать в Telegram</a>
+    <a href="#video" class="btn-outline">▶ Смотреть демо</a>
+  </div>
+</div>
+
+<!-- VIDEO -->
+<div id="video" style="position:relative;z-index:1;padding: 0 24px;">
+  <div class="video-wrap">
+    <div class="video-top-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <div class="video-url">демонстрация работы расширения · 2:58</div>
+    </div>
+    <div class="video-frame">
+      <iframe
+        src="https://rutube.ru/play/embed/321446cb8e14618a603f7d8bef5437cd"
+        allow="clipboard-write; autoplay"
+        allowfullscreen
+        title="Локальное распознавание документов с фото для 1С"
+      ></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-label">// как это работает</div>
+  <h2 class="section-title">Три шага<br/>вместо пятнадцати минут</h2>
+  <p class="section-sub">Расширение встраивается в 1С как обычная кнопка. Никакого обучения сотрудников.</p>
+  <div class="steps">
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <div class="step-title">Сфотографируйте или отсканируйте</div>
+      <div class="step-text">Фото с телефона, скан, PDF — даже помятый или чуть кривой документ. Форматы: JPG, PNG, PDF, многостраничные.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">02</div>
+      <div class="step-title">Нажмите «Распознать»</div>
+      <div class="step-text">Локальный ИИ определяет тип документа, находит поставщика, подбирает номенклатуру из вашего справочника.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">03</div>
+      <div class="step-title">Проверьте и проведите</div>
+      <div class="step-text">Документ в 1С уже заполнен. Ваша задача — только проверить и провести.</div>
+    </div>
+  </div>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- WHY NOT CLOUD -->
+<section id="why">
+  <div class="section-label">// почему не облако</div>
+  <h2 class="section-title">Ваши документы<br/>остаются у вас</h2>
+  <p class="section-sub">Облачные OCR отправляют накладные, цены, ИНН поставщиков на чужие серверы. Здесь — нет.</p>
+  <div class="compare">
+    <div class="compare-card bad">
+      <div class="compare-head"><span class="tag-bad">Облачный OCR</span></div>
+      <ul class="compare-list">
+        <li><span class="icon">✗</span> Документы уходят на сторонние серверы</li>
+        <li><span class="icon">✗</span> Нужен интернет для каждого документа</li>
+        <li><span class="icon">✗</span> ИНН, цены, поставщики — всё в облаке</li>
+        <li><span class="icon">✗</span> Подписка или плата за каждый документ</li>
+        <li><span class="icon">✗</span> Зависимость от внешнего сервиса</li>
+      </ul>
+    </div>
+    <div class="compare-card good">
+      <div class="compare-head"><span class="tag-good">НейроСкан 1С</span></div>
+      <ul class="compare-list">
+        <li><span class="icon" style="color:var(--green)">✓</span> Всё обрабатывается на вашем компьютере</li>
+        <li><span class="icon" style="color:var(--green)">✓</span> Работает без интернета</li>
+        <li><span class="icon" style="color:var(--green)">✓</span> Данные не покидают вашу сеть</li>
+        <li><span class="icon" style="color:var(--green)">✓</span> Разовая оплата, не подписка</li>
+        <li><span class="icon" style="color:var(--green)">✓</span> Не сломается при обновлении 1С</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-label">// возможности</div>
+  <h2 class="section-title">Что умеет расширение</h2>
+  <p class="section-sub">Всё что нужно для работы с первичными документами.</p>
+  <div class="features-grid">
+    <div class="feat">
+      <div class="feat-icon">📄</div>
+      <div class="feat-title">УПД и ТОРГ-12</div>
+      <div class="feat-text">Автоматическое определение типа документа, поддержка обоих форматов.</div>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">📷</div>
+      <div class="feat-title">Любой формат</div>
+      <div class="feat-text">JPG, PNG, PDF, многостраничные файлы, фото с телефона.</div>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🔍</div>
+      <div class="feat-title">Подбор номенклатуры</div>
+      <div class="feat-text">ИИ находит товары из вашего справочника, не создаёт дубли.</div>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🏭</div>
+      <div class="feat-title">Поиск поставщика</div>
+      <div class="feat-text">Автоматически находит контрагента по ИНН или названию.</div>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">💰</div>
+      <div class="feat-title">Цены и НДС</div>
+      <div class="feat-text">Заполняет количество, цены, ставки НДС из документа.</div>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">⚙️</div>
+      <div class="feat-title">Любая конфигурация</div>
+      <div class="feat-text">Готово для УТ 11.5 и БП 3.0. Адаптируем под КА, ERP, УНФ.</div>
+    </div>
+  </div>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- SPECS -->
+<section id="specs">
+  <div class="section-label">// требования</div>
+  <h2 class="section-title">Требования<br/>к компьютеру</h2>
+  <p class="section-sub">Расширение работает на обычных рабочих ПК. Видеокарта — не обязательна, но ускоряет работу.</p>
+  <div class="specs-wrap">
+    <table class="specs-table">
+      <thead>
+        <tr>
+          <th>Компонент</th>
+          <th>Минимум</th>
+          <th>Рекомендуется</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Процессор</td>
+          <td>Intel Core 4-го поколения+ или AMD Ryzen с AVX2</td>
+          <td>Intel Core i5-12400 и новее</td>
+        </tr>
+        <tr>
+          <td>Оперативная память</td>
+          <td>8 ГБ</td>
+          <td>16 ГБ</td>
+        </tr>
+        <tr>
+          <td>Видеокарта</td>
+          <td>Не обязательна</td>
+          <td>NVIDIA от 6 ГБ (RTX 3060+)</td>
+        </tr>
+        <tr>
+          <td>Место на диске</td>
+          <td>10 ГБ</td>
+          <td>20 ГБ</td>
+        </tr>
+        <tr>
+          <td>ОС</td>
+          <td>Windows 10 64-bit</td>
+          <td>Windows 10/11 64-bit</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="speed-grid">
+    <div class="speed-card">
+      <div class="speed-icon">⚡</div>
+      <div class="speed-label">NVIDIA RTX 3060+ (8–12 ГБ)</div>
+      <div class="speed-val">20–60 сек</div>
+    </div>
+    <div class="speed-card">
+      <div class="speed-icon">🔋</div>
+      <div class="speed-label">Видеокарта 2–4 ГБ</div>
+      <div class="speed-val">1–2 мин</div>
+    </div>
+    <div class="speed-card">
+      <div class="speed-icon">🖥</div>
+      <div class="speed-label">Только процессор</div>
+      <div class="speed-val">2–5 мин</div>
+    </div>
+  </div>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- AUDIENCE -->
+<section id="audience">
+  <div class="section-label">// для кого</div>
+  <h2 class="section-title">Бухгалтерии<br/>и франчайзи</h2>
+  <p class="section-sub">Два пути работы с расширением — купить для себя или предлагать своим клиентам.</p>
+  <div class="audience-grid">
+    <div class="aud-card">
+      <div class="aud-icon">🏢</div>
+      <div class="aud-title">Для бухгалтерий</div>
+      <div class="aud-sub">Окупается за первую неделю, если вы вручную вводите хотя бы 10 накладных в день</div>
+      <ul class="aud-list">
+        <li><span class="chk">✓</span> Экономит 10–15 минут на каждом документе</li>
+        <li><span class="chk">✓</span> Не нужно обучать сотрудников — просто кнопка в 1С</li>
+        <li><span class="chk">✓</span> Данные не покидают вашу компанию</li>
+        <li><span class="chk">✓</span> Установка и настройка входит в стоимость</li>
+        <li><span class="chk">✓</span> Работает с УТ 11.5, БП 3.0 и другими конфигурациями</li>
+      </ul>
+    </div>
+    <div class="aud-card">
+      <div class="aud-icon">🤝</div>
+      <div class="aud-title">Для 1С-франчайзи</div>
+      <div class="aud-sub">Готовое решение для ваших клиентов — предлагайте и зарабатывайте</div>
+      <ul class="aud-list">
+        <li><span class="chk">✓</span> Партнёрская модель — обсуждается индивидуально</li>
+        <li><span class="chk">✓</span> Готовое решение без разработки с вашей стороны</li>
+        <li><span class="chk">✓</span> Адаптация под конфигурацию клиента</li>
+        <li><span class="chk">✓</span> Техническая поддержка от разработчика</li>
+        <li><span class="chk">✓</span> Напишите — обсудим условия сотрудничества</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="section-label">// вопросы и ответы</div>
+  <h2 class="section-title">Часто<br/>спрашивают</h2>
+  <p class="section-sub" style="margin-bottom:32px;">Если не нашли ответ — пишите в Telegram.</p>
+  <div class="faq-list">
+    <div class="faq-item">
+      <div class="faq-q">Подойдёт для моей конфигурации 1С? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Готовые версии — для УТ 11.5 и БП 3.0. Адаптируем под любую конфигурацию: КА, ERP, УНФ и доработанные версии. Настраиваем правила заполнения под вашу учётную политику.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Нужно что-то программировать или настраивать самому? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Нет. Установку и настройку выполняет разработчик — один час работы включён в стоимость. После покупки напишите в ТП для согласования времени подключения.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Какая точность распознавания? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">95%+ на чётких сканах и хороших фотографиях. Система работает даже с немного помятыми или кривыми документами. После настройки под ваши реальные документы точность дополнительно повышается.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Сломается ли при обновлении 1С? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Нет. Расширение не изменяет типовые объекты конфигурации и работает стабильно при обновлениях 1С. Проверено на релизах УТ 11.5.25.85.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Что нужно установить дополнительно? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Две зависимости, обе бесплатные: LM Studio (lmstudio.ai) и AI-модель Qwen3 VL 4B (скачивается внутри LM Studio). Устанавливает разработчик в рамках включённого часа работ.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Данные точно не уходят в интернет? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Да, это принципиальное отличие от облачных OCR-сервисов. ИИ работает локально на вашем компьютере через LM Studio. Документы, ИНН, цены — всё остаётся внутри вашей сети.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <div class="cta-inner">
+    <div class="badge" style="margin:0 auto 24px;">Готово к внедрению</div>
+    <div class="cta-title">Хватит вводить<br/>накладные вручную</div>
+    <p class="cta-sub">Напишите в Telegram — обсудим вашу конфигурацию, условия для франчайзи или просто ответим на вопросы.</p>
+    <div class="cta-btns">
+      <a href="https://t.me/vladimir_7575" class="btn-primary">✉ Написать в Telegram</a>
+      <a href="https://infostart.ru/marketplace/2700415/" class="btn-outline">Купить на Инфостарте</a>
+    </div>
+    <div class="cta-note">Установка и настройка включена · Работает без интернета · Данные остаются у вас</div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Нейро<span>Скан</span> 1С</div>
+  <div class="footer-text">Программист 1С Владимир · Расширение для автоматического распознавания накладных</div>
+</footer>
+
+<script>
+  // FAQ accordion
+  document.querySelectorAll('.faq-q').forEach(q => {
+    q.addEventListener('click', () => {
+      const item = q.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    });
+  });
+
+  // Fade in on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.step-card, .feat, .aud-card, .compare-card, .speed-card').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(24px)';
+    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>
